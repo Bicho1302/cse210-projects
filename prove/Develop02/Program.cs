@@ -1,88 +1,165 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 
-
-   class JournalProgram
-  {
-    static string journalFileName = "journal.txt";
-    static string journalContent = "";
-
+class Program
+{
     static void Main()
     {
-        LoadJournal();
-        bool quit = false;
+        Journal journal = new Journal();
+        string choice;
 
-        while (!quit)
+        do
         {
-            Console.WriteLine("Options:");
-            Console.WriteLine("1. Write");
-            Console.WriteLine("2. Display");
-            Console.WriteLine("3. Load");
-            Console.WriteLine("4. Save");
-            Console.WriteLine("5. Quit");
-            Console.WriteLine("Choose an option:");
-
-            string choice = Console.ReadLine();
+            Console.WriteLine("1. Write a new entry");
+            Console.WriteLine("2. Display the journal");
+            Console.WriteLine("3. Save the journal to a file");
+            Console.WriteLine("4. Load the journal from a file");
+            Console.WriteLine("5. Exit");
+            Console.Write("Enter your choice: ");
+            choice = Console.ReadLine();
 
             switch (choice)
             {
                 case "1":
-                    WriteEntry();
+                    string prompt = GetRandomPrompt();
+                    Console.WriteLine(prompt);
+                    string response = Console.ReadLine();
+                    journal.AddEntry(new Entry(prompt, response, DateTime.Now));
                     break;
                 case "2":
-                    DisplayEntries();
+                    journal.DisplayEntries();
                     break;
                 case "3":
-                    LoadJournal();
+                    Console.Write("Enter a filename to save the journal: ");
+                    string saveFilename = Console.ReadLine();
+                    journal.SaveJournalToFile(saveFilename);
                     break;
                 case "4":
-                    SaveJournal();
+                    Console.Write("Enter a filename to load the journal: ");
+                    string loadFilename = Console.ReadLine();
+                    journal.LoadJournalFromFile(loadFilename);
                     break;
                 case "5":
-                    quit = true;
+                    Console.WriteLine("Exiting the program.");
                     break;
                 default:
-                    Console.WriteLine("Invalid option. Please try again.");
+                    Console.WriteLine("Invalid choice. Please try again.");
                     break;
             }
+
+            Console.WriteLine();
+        } while (choice != "5");
+    }
+
+    static string GetRandomPrompt()
+    {
+        List<string> prompts = new List<string>
+        {
+            "Who was the most interesting person I interacted with today?",
+            "What was the best part of my day?",
+            "How did I see the hand of the Lord in my life today?",
+            "What was the strongest emotion I felt today?",
+            "If I had one thing I could do over today, what would it be?"
+        };
+
+        Random random = new Random();
+        int index = random.Next(prompts.Count);
+        return prompts[index];
+    }
+}
+
+class Entry
+{
+    public string Prompt { get; }
+    public string Response { get; }
+    public DateTime Date { get; }
+
+    public Entry(string prompt, string response, DateTime date)
+    {
+        Prompt = prompt;
+        Response = response;
+        Date = date;
+    }
+
+    public override string ToString()
+    {
+        return $"Date: {Date}\nPrompt: {Prompt}\nResponse: {Response}\n";
+    }
+}
+
+class Journal
+{
+    private List<Entry> entries;
+
+    public Journal()
+    {
+        entries = new List<Entry>();
+    }
+
+    public void AddEntry(Entry entry)
+    {
+        entries.Add(entry);
+    }
+
+    public void DisplayEntries()
+    {
+        if (entries.Count == 0)
+        {
+            Console.WriteLine("Journal is empty.");
+            return;
+        }
+
+        foreach (Entry entry in entries)
+        {
+            Console.WriteLine(entry);
         }
     }
 
-    static void WriteEntry()
+    public void SaveJournalToFile(string filename)
     {
-        Console.WriteLine("Enter your journal entry:");
-        string entry = Console.ReadLine();
-        journalContent += $"{entry}\n";
+        try
+        {
+            using (StreamWriter writer = new StreamWriter(filename))
+            {
+                foreach (Entry entry in entries)
+                {
+                    writer.WriteLine(entry.ToString());
+                }
+            }
+
+            Console.WriteLine("Journal saved successfully.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving journal: {ex.Message}");
+        }
     }
 
-    static void DisplayEntries()
+    public void LoadJournalFromFile(string filename)
     {
-        if (!string.IsNullOrEmpty(journalContent))
+        try
         {
-            Console.WriteLine("Journal Entries:");
-            Console.WriteLine(journalContent);
-        }
-        else
-        {
-            Console.WriteLine("No entries to display.");
-        }
-    }
+            entries.Clear();
 
-    static void LoadJournal()
-    {
-        if (File.Exists(journalFileName))
-        {
-            journalContent = File.ReadAllText(journalFileName);
+            using (StreamReader reader = new StreamReader(filename))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    string prompt = line.Substring(line.IndexOf(':') + 2);
+                    string response = reader.ReadLine().Substring(line.IndexOf(':') + 2);
+                    string dateString = reader.ReadLine().Substring(line.IndexOf(':') + 2);
+                    DateTime date = DateTime.Parse(dateString);
+                    entries.Add(new Entry(prompt, response, date));
+                }
+            }
+
             Console.WriteLine("Journal loaded successfully.");
         }
-        else
+        catch (Exception ex)
         {
-            Console.WriteLine("No journal file found.");
+            Console.WriteLine($"Error loading journal: {ex.Message}");
         }
-    }
-
-    static void SaveJournal()
-    {
-        File.WriteAllText(journalFileName, journalContent);
-        Console.WriteLine("Journal saved successfully.");
     }
 }
